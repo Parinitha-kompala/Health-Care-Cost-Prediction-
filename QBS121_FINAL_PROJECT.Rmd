@@ -1,0 +1,138 @@
+---
+title: "QBS121_FINAL_PROJECT"
+author: "GROUP3"
+date: "2/26/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+```{r}
+#reading the dataset
+insurance<-read.csv("/Users/parinithakompala/Downloads/insurance.csv")
+```
+
+```{r}
+#looking into the variables
+str(insurance)
+
+#converting the str into factor types
+insurance$smoker<-as.factor(insurance$smoker)
+insurance$sex<-as.factor(insurance$sex)
+insurance$region<-as.factor(insurance$region)
+```
+
+```{r}
+#checking for missing mess in the dataset.
+library(visdat)
+
+insurance %>% 
+  visdat::vis_miss()
+```
+```{r}
+#we are plotting the dependent variable 
+#from this we can concluse that it is not normally distributed
+Data %>% 
+  as_tibble() %>% 
+  select(region, charges) %>% 
+  ggplot(aes(charges, fill = region)) +
+  geom_histogram() +
+  facet_wrap(~region) +
+  theme(legend.position = "none") +
+  theme_minimal()
+
+Data %>% 
+  as_tibble() %>% 
+  mutate(charges = log(charges)) %>% 
+  select(region, charges) %>% 
+  ggplot(aes(charges, fill = region)) +
+  geom_histogram() +
+  facet_wrap(~region) +
+  theme(legend.position = "none") +
+  theme_minimal()#to make the linear regression result reliable, the target var should be normally distributed
+```
+```{r}
+#checking corelation between the variables
+cor(insurance$charges,insurance$age)#0.2990082
+
+insurance_n <- select_if(insurance, is.numeric) 
+corrmatrix <- cor(insurance_n)
+corrplot::corrplot(corrmatrix, method=c("number"), type = "upper",tl.cex=.6	
+, tl.col="black", title="Correlation Plot",number.font = 2, mar=c(0,0,1,0),	)
+
+#from this we can say that charges comparitively highly corelated with "age" followed by "bmi". And there is no correlation between "bmi" and "children".
+```
+
+
+```{r EDA, message=FALSE, warning=FALSE, paged.print=TRUE}
+
+#looking into the correlation between charges and age, charges and bmi based on the region
+
+Data<-insurance
+x <- ggplot(Data, aes(age, charges,color=region)) +
+  geom_jitter( alpha = 0.5) +
+    theme_light()
+
+y <- ggplot(Data, aes(bmi, charges, color = region)) +
+  geom_jitter( alpha = 0.5) +
+  theme_light()
+
+x
+y
+
+
+# p <- plot_grid(x, y) 
+# title <- ggdraw() + draw_label("1. Correlation between Charges and Age / BMI", fontface='bold')
+# plot_grid(title, p, ncol=1, rel_heights=c(0.1, 1))
+
+
+
+
+#As Age go up Charges for health insurance also trends up.
+
+```
+```{r}
+#plot between the dependent variable and the all the other independent variable
+for (col in c('sex', 'region', 'children', 'smoker')) {
+  plot <- ggplot(data = insurance,
+                 aes_string(x = col, y = 'charges', group = col, fill = col)) + 
+            geom_boxplot(show.legend = FALSE) + 
+            ggtitle(glue::glue("Boxplot of Medical Charges per {col}"))
+  print(plot)
+}
+```
+
+
+
+```{r}
+model1_linear<-lm(charges~age+bmi+region+children+sex+smoker,data=insurance)
+summary(model1_linear)
+```
+
+```{r}
+model2_linear<-lm(charges~age+bmi+smoker,data=insurance)
+summary(model2_linear)
+```
+```{r}
+insurance$charges_cat <- ifelse(insurance$charges >median(insurance$charges), 1, 0)
+```
+```{r}
+model_glm<-glm(charges_cat~age+sex+bmi+children+smoker+region,family=binomial,data=insurance)
+summary(model_glm)
+```
+
+
+```{r}
+model_lmer<-lmer(charges~sex+age+children+smoker+(1|region),data=insurance)
+summary(model_lmer)
+```
+
+```{r}
+model_glmer<-glmer(charges_cat~sex+age+children+smoker+(1|region),family=binomial,data=insurance)
+summary(model_glmer)
+```
+
